@@ -11,16 +11,17 @@ import taskRouter from "./routes/taskRouter.js";
 const app = express();
 dotenv.config({ path: "./config/config.env" });
 
+// CORS configuration
 app.use(
   cors({
     origin: process.env.FRONTEND_URL,
     methods: ["GET", "PUT", "DELETE", "POST"],
     credentials: true,
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
-    exposedHeaders: ['set-cookie']
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
+// Middleware
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -32,26 +33,33 @@ app.use(
   })
 );
 
+// Global cookie settings
 app.use((req, res, next) => {
-  res.cookie = res.cookie.bind(res);
-  res.cookie = (name, value, options = {}) => {
-    return res.cookie(name, value, {
+  const originalCookie = res.cookie;
+  res.cookie = function (name, value, options = {}) {
+    return originalCookie.call(this, name, value, {
       ...options,
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      domain: process.env.NODE_ENV === "production" 
+        ? ".onrender.com"  // Adjust this to match your domain
+        : "localhost",
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
     });
   };
   next();
 });
 
+// Routes
 app.use("/api/v1/user", userRouter);
 app.use("/api/v1/task", taskRouter);
 
+// Database connection
 dbConnection();
 
+// Error handling
 app.use(errorMiddleware);
 
 export default app;
